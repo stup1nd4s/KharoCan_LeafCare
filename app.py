@@ -15,7 +15,7 @@ import tempfile
 import zipfile
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
@@ -23,9 +23,11 @@ from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 from starlette.background import BackgroundTask
-from ultralytics import YOLO
 
 import feedback_store
+
+if TYPE_CHECKING:
+    from ultralytics import YOLO
 
 DEFAULT_MODEL_PATH = (
     Path(__file__).resolve().parent
@@ -62,6 +64,8 @@ def get_local_model() -> YOLO:
             f"Local YOLO model was not found at {MODEL_PATH}. "
             "Set LEAFCARE_MODEL_PATH to the trained best.pt file."
         )
+    from ultralytics import YOLO
+
     return YOLO(str(MODEL_PATH))
 
 
