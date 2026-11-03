@@ -146,6 +146,15 @@ class FeedbackApiTests(unittest.TestCase):
             {"total": 2, "correct": 1, "edited": 0, "no_lesions": 1},
         )
 
+    def test_feedback_storage_can_be_disabled_for_hosted_service(self) -> None:
+        with patch.object(app, "DISABLE_FEEDBACK_STORAGE", True):
+            response = self.submit_review("correct")
+            stats = self.client.get("/api/feedback/stats")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(stats.status_code, 403)
+        self.assertEqual(feedback_store.get_review_stats()["total"], 0)
+
     def test_export_contains_reviewed_images_and_yolo_labels(self) -> None:
         self.submit_review("correct")
         self.submit_review("no_lesions", image=jpeg_bytes("blue"))

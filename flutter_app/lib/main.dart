@@ -10,7 +10,11 @@ import 'package:image_picker/image_picker.dart';
 
 const apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://192.168.254.103:8000',
+  defaultValue: 'https://kharo-can-leafcare-api.onrender.com',
+);
+const enableFeedbackUpload = bool.fromEnvironment(
+  'ENABLE_FEEDBACK_UPLOAD',
+  defaultValue: false,
 );
 
 void main() {
@@ -287,7 +291,9 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     unawaited(_initializeCamera());
-    unawaited(_loadFeedbackStats());
+    if (enableFeedbackUpload) {
+      unawaited(_loadFeedbackStats());
+    }
   }
 
   Future<void> _initializeCamera() async {
@@ -693,13 +699,15 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
     return Scaffold(
       appBar: AppBar(
         title: const Text('LeafCare'),
-        actions: [
-          IconButton(
-            onPressed: _copyDatasetExportUrl,
-            tooltip: 'Copy Colab dataset export URL',
-            icon: const Icon(Icons.archive_outlined),
-          ),
-        ],
+        actions: enableFeedbackUpload
+            ? [
+                IconButton(
+                  onPressed: _copyDatasetExportUrl,
+                  tooltip: 'Copy Colab dataset export URL',
+                  icon: const Icon(Icons.archive_outlined),
+                ),
+              ]
+            : const [],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -802,7 +810,8 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
               child: Image.memory(_annotatedImage!, fit: BoxFit.contain),
             ),
           ],
-          if (_currentImageBytes != null &&
+          if (enableFeedbackUpload &&
+              _currentImageBytes != null &&
               _annotatedImage != null &&
               !_feedbackSaved) ...[
             const SizedBox(height: 12),
@@ -858,14 +867,15 @@ class _CapturePageState extends State<CapturePage> with WidgetsBindingObserver {
             ),
           ],
           const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: _copyDatasetExportUrl,
-            icon: const Icon(Icons.download_outlined),
-            label: const Text('Copy Colab training ZIP link'),
-          ),
+          if (enableFeedbackUpload)
+            TextButton.icon(
+              onPressed: _copyDatasetExportUrl,
+              icon: const Icon(Icons.download_outlined),
+              label: const Text('Copy Colab training ZIP link'),
+            ),
           const SizedBox(height: 12),
           Text(
-            'Images are sent to your configured API for local model analysis. '
+            'Images are sent to your configured API for model analysis. '
             'Results are informational, not a substitute for expert advice.',
             style: Theme.of(context).textTheme.bodySmall,
           ),

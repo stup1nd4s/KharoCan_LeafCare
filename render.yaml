@@ -16,6 +16,10 @@ services:
         value: /tmp/leafcare/feedback.sqlite3
       - key: LOCAL_DETECTION_CONFIDENCE
         value: "0.25"
+      - key: LOCAL_INFERENCE_IMAGE_SIZE
+        value: "416"
+      - key: LEAFCARE_DISABLE_FEEDBACK_STORAGE
+        value: "true"
       - key: OMP_NUM_THREADS
         value: "1"
       - key: MKL_NUM_THREADS

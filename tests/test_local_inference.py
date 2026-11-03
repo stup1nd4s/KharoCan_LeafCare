@@ -71,6 +71,7 @@ class LocalInferenceApiTests(unittest.TestCase):
         self.assertIn("1 possible Sigatoka lesion detected", payload["summary"])
         self.model.predict.assert_called_once()
         self.assertEqual(self.model.predict.call_args.kwargs["conf"], 0.25)
+        self.assertEqual(self.model.predict.call_args.kwargs["imgsz"], 640)
         annotated = Image.open(
             io.BytesIO(base64.b64decode(payload["annotated_image_base64"]))
         )

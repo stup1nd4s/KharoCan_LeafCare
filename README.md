@@ -63,22 +63,26 @@ missed lesions or other errors.
 ## Host the API on Render
 
 The Render Blueprint is in [render.yaml](./render.yaml). It deploys the current
-YOLO checkpoint with CPU-only PyTorch and creates a randomly generated password
-to protect the training-data export. The API itself accepts analysis and
-feedback uploads without a login, so share the service URL only with intended
-users.
+YOLO checkpoint with CPU-only PyTorch, creates a randomly generated password
+for the training-data export, and disables review-image uploads and storage.
+Only image-analysis requests are enabled in the hosted Render configuration.
 
 The configured **free** Render service is a demo. It can sleep after inactivity,
 making its first request take about a minute, and its filesystem is temporary:
 reviewed photos and the SQLite database can disappear when Render restarts or
-redeploys the service. Inference also runs on CPU. On this PC, a CPU test took
-4.64 seconds per 640-pixel image; Render's free CPU/memory limits may be tighter
-and may not be sufficient for this YOLOv8m checkpoint. Confirm `/api/health`
-and test image analysis after deployment. Persistent feedback storage requires
-a paid Render service and persistent disk.
+redeploys the service. Inference also runs on CPU. The Render config uses 416-pixel input to reduce
+work. On the local held-out test split, that input measured mAP50 0.7937 vs
+0.7972 at 640, and mAP50-95 0.6624 vs 0.6646. Despite this adjustment, the
+current Free deployment returns HTTP 502 for actual inference requests. The
+free plan does not expose memory metrics, so its resource usage cannot be
+confirmed there. The hosted model must pass a real image-analysis request
+before the phone app can be considered cloud-ready. Durable feedback storage is
+disabled by default; enabling it requires explicit configuration and paid
+persistent storage.
 
-To publish, create a **private** GitHub repository and push this project. The
-repository must include `weights/new_combined_best.pt`; `.gitignore` excludes
+The private source repository is
+[KharoCan_LeafCare](https://github.com/stup1nd4s/KharoCan_LeafCare). It includes
+`weights/new_combined_best.pt`; `.gitignore` excludes
 the `.env` secret file, training ZIPs, other model checkpoints, local database,
 and virtual environments. In Render, connect the repository and create a
 Blueprint from `render.yaml`. After Render assigns the service an `onrender.com`
@@ -89,16 +93,10 @@ Set-Location flutter_app
 flutter build apk --release --dart-define=API_BASE_URL=https://YOUR-SERVICE.onrender.com
 ```
 
-The archive icon copies the protected `/api/dataset/export` URL. For a Render
-deployment, open it in a browser and authenticate with username
-`leafcare-admin` and the generated `LEAFCARE_EXPORT_PASSWORD` shown in the
-Render service's environment settings. Because the base training ZIP is
-intentionally not deployed, the endpoint downloads
-`LeafCare-reviewed-feedback.zip`, containing supplementary training images and
-YOLO labels only. Upload that ZIP to
-`MyDrive/LeafCare/LeafCare-reviewed-feedback.zip`; the Colab notebook merges its
-images/labels into the base dataset's training split when the archive is
-present. The feedback export does not contain the base dataset or checkpoint.
+Review uploads are disabled on Render, so the hosted app does not save images
+to the cloud. Local feedback collection can still be enabled with
+`--dart-define=ENABLE_FEEDBACK_UPLOAD=true` while pointing the app at a trusted
+local API using `API_BASE_URL`.
 
 ## Run the Android app locally
 
@@ -110,8 +108,7 @@ flutter pub get
 flutter run -d <phone-device-id>
 ```
 
-The default phone API URL is `http://192.168.254.103:8000`; update
-`API_BASE_URL` in `flutter_app/lib/main.dart` or pass
+The default phone API URL is the Render service. To use the PC API, pass
 `--dart-define=API_BASE_URL=http://<current-PC-Wi-Fi-IP>:8000` if the PC's
 Wi-Fi address changes. Keep the phone and PC on the same Wi-Fi network. If the
 phone cannot load `/api/health`, allow inbound TCP port 8000 through Windows
@@ -130,10 +127,11 @@ analysis, choose one of the review actions:
   remove boxes or clear them before saving.
 - **No Sigatoka** saves an explicitly reviewed image with an empty label.
 
-When running locally, reviewed images and annotations are stored on the PC in
-`data\feedback.sqlite3` (override the path with `LEAFCARE_DATABASE_PATH`). In
-Render, they are sent to the cloud service instead; free Render storage is
-temporary. Only reviewed samples are included in training exports.
+Local reviewed images and annotations are stored on the PC in
+`data\feedback.sqlite3` (override the path with `LEAFCARE_DATABASE_PATH`). To
+enable feedback in a local Flutter build, use
+`--dart-define=ENABLE_FEEDBACK_UPLOAD=true`. Hosted builds keep feedback
+disabled to avoid sending reviewed images to Render.
 
 To export the latest training ZIP:
 
@@ -153,7 +151,6 @@ It also includes `feedback_manifest.csv` and `feedback/README.txt`. Keep a copy
 of the original ZIP; this endpoint creates a new download and does not overwrite
 the base ZIP on disk.
 
-The Android manifest allows cleartext HTTP for local development. Use the
-Render HTTPS URL for a hosted build. The training export requires HTTP Basic
-authentication, but image analysis and feedback submission do not; do not share
-the hosted API URL publicly or send sensitive images to it.
+The Android manifest allows cleartext HTTP for local development. Use HTTPS
+for hosted APIs. The training export requires HTTP Basic authentication; hosted
+feedback uploads are disabled. Do not send sensitive images to the hosted API.

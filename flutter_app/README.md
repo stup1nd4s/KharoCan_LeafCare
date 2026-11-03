@@ -13,9 +13,9 @@ returned detection count, detected classes, and annotated image.
    .\.venv\Scripts\python.exe -m uvicorn app:app --host 0.0.0.0 --port 8000
    ```
 
-2. Keep the phone and PC on the same Wi-Fi network. The current app default is
-   `http://192.168.254.103:8000`; update `API_BASE_URL` in `lib/main.dart` if
-   the PC's Wi-Fi IP changes.
+2. Keep the phone and PC on the same Wi-Fi network. The app defaults to the
+   hosted Render API. To use the PC API, pass its Wi-Fi address through
+   `API_BASE_URL`.
 3. If the phone cannot load `http://192.168.254.103:8000/api/health`, allow inbound
    TCP port 8000 for Python/Uvicorn in Windows Firewall on the active network.
    Also check that the router does not isolate wireless clients from each
@@ -24,7 +24,7 @@ returned detection count, detected classes, and annotated image.
 4. Install or update the app from this directory:
 
    ```powershell
-   flutter run -d <phone-device-id> --dart-define=API_BASE_URL=http://192.168.254.103:8000
+   flutter run -d <phone-device-id> --dart-define=API_BASE_URL=http://192.168.254.103:8000 --dart-define=ENABLE_FEEDBACK_UPLOAD=true
    ```
 
 USB or wireless debugging is needed to install/run the development build from
@@ -45,22 +45,21 @@ flutter build apk --release --dart-define=API_BASE_URL=https://YOUR-SERVICE.onre
 ```
 
 Install the resulting `build\app\outputs\flutter-apk\app-release.apk`. The free
-Render demo may sleep and take about a minute to wake; reviewed images and the
-SQLite database on its temporary filesystem may be lost after a restart or
-redeploy. CPU inference may also be slower than on the PC.
+Render demo may sleep and take about a minute to wake. CPU inference may also
+be slower than on the PC; the currently deployed free service has not passed
+an image-analysis test yet. Hosted review uploads are disabled, so reviewed
+photos are not sent to Render.
 
 ## Review and export training data
 
-After analysis, select **Correct** to accept the predicted Sigatoka boxes,
+For a local API build with `ENABLE_FEEDBACK_UPLOAD=true`, after analysis select
+**Correct** to accept the predicted Sigatoka boxes,
 **Edit boxes** to draw or remove boxes manually, or **No Sigatoka** to save an
 explicitly reviewed empty label. The API stores only reviewed images and
 annotations on the PC in `data\feedback.sqlite3`; it does not send them to a
 cloud service.
 
-The archive icon copies the ZIP export URL. Open the copied URL in a browser on
-browser to download reviewed data. On Render, authenticate with username
-`leafcare-admin` and the value of `LEAFCARE_EXPORT_PASSWORD` in the Render
-service environment settings. The hosted export contains reviewed examples
-only; upload `LeafCare-reviewed-feedback.zip` to the Google Drive location used
-by the Colab notebook. The notebook merges these samples into the base
-dataset's training split.
+The archive icon copies the ZIP export URL when feedback uploads are enabled.
+Open the copied URL in a browser on the PC to download reviewed data. Local
+reviews are stored in `data\feedback.sqlite3`. Hosted builds hide the review
+controls by default and the Render API rejects feedback uploads.

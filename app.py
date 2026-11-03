@@ -49,6 +49,21 @@ except ValueError as exc:
 if not 0 <= DETECTION_CONFIDENCE <= 1:
     raise RuntimeError("LOCAL_DETECTION_CONFIDENCE must be between 0 and 1.")
 
+try:
+    INFERENCE_IMAGE_SIZE = int(os.getenv("LOCAL_INFERENCE_IMAGE_SIZE", "640"))
+except ValueError as exc:
+    raise RuntimeError(
+        "LOCAL_INFERENCE_IMAGE_SIZE must be a positive multiple of 32."
+    ) from exc
+if INFERENCE_IMAGE_SIZE < 32 or INFERENCE_IMAGE_SIZE % 32 != 0:
+    raise RuntimeError(
+        "LOCAL_INFERENCE_IMAGE_SIZE must be a positive multiple of 32."
+    )
+
+DISABLE_FEEDBACK_STORAGE = os.getenv(
+    "LEAFCARE_DISABLE_FEEDBACK_STORAGE", "false"
+).casefold() in {"1", "true", "yes"}
+
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
 EXPORT_USERNAME = "leafcare-admin"
 EXPORT_PASSWORD = os.getenv("LEAFCARE_EXPORT_PASSWORD")
@@ -76,6 +91,7 @@ def run_local_inference(
     results = get_local_model().predict(
         source=image,
         conf=DETECTION_CONFIDENCE,
+        imgsz=INFERENCE_IMAGE_SIZE,
         verbose=False,
     )
     if len(results) != 1:
@@ -311,6 +327,11 @@ def save_feedback(
     detections_json: str = Form(...),
     annotations_json: str = Form(...),
 ) -> dict[str, Any]:
+    if DISABLE_FEEDBACK_STORAGE:
+        raise HTTPException(
+            status_code=403,
+            detail="Reviewed image storage is disabled for this deployment.",
+        )
     if source not in {"camera", "gallery"}:
         raise HTTPException(status_code=400, detail="Source must be camera or gallery.")
     if decision not in {"correct", "edited", "no_lesions"}:
@@ -363,6 +384,11 @@ def save_feedback(
 
 @app.get("/api/feedback/stats")
 def feedback_stats() -> dict[str, int]:
+    if DISABLE_FEEDBACK_STORAGE:
+        raise HTTPException(
+            status_code=403,
+            detail="Reviewed image storage is disabled for this deployment.",
+        )
     return feedback_store.get_review_stats()
 
 
