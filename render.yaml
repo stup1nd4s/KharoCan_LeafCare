@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: kharo-can-leafcare-api
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install --no-cache-dir -r requirements-render.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: LEAFCARE_MODEL_PATH
+        value: weights/new_combined_best.pt
+      - key: LEAFCARE_DATABASE_PATH
+        value: /tmp/leafcare/feedback.sqlite3
+      - key: LOCAL_DETECTION_CONFIDENCE
+        value: "0.25"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
+      - key: LEAFCARE_EXPORT_PASSWORD
+        generateValue: true

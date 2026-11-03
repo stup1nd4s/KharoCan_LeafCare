@@ -1,0 +1,6 @@
+fastapi
+inference-sdk
+pillow
+python-multipart
+ultralytics
+uvicorn[standard]
